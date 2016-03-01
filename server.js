@@ -7,15 +7,26 @@ var io=require('socket.io')(http);
                                         
 app.use(express.static(__dirname+'/public'));
 
+var clientInfo={};
+
 io.on('connection', function(socket){
-	console.log('User connected via socket.io');
+	socket.on('joinRoom', function(req){
+		console.log('User connected via socket.io'); 
+	  clientInfo[socket.id]=req;
+		socket.join(req.room);
+		socket.broadcast.to(req.room).emit('message',{
+			name: 'System',
+			text: req.name+' has joined',
+			timestamp:moment().valueOf()
+		});	
+	});
 	
 	socket.on('message', function(message){
 		console.log('Message received: '+message.text);
 		
 		message.timestamp=moment().valueOf();
-		//socket.broadcast.emit('message', message);  --to all nut sender
-		io.emit('message', message);
+		//socket.broadcast.emit('message', message);  --to all but sender
+		io.to(clientInfo[socket.id].room).emit('message', message);
 	});
 	
 	socket.emit('message',{
